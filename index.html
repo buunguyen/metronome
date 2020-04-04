@@ -163,7 +163,7 @@
               // Show next note
               const nextNote = notes[(beatCount + 1) % notes.length]
               const $nextNote = $('.modal .next-note');
-              $nextNote.text(nextNote || (beatCount % beats + 1));
+              $nextNote.text(nextNote || ((beatCount + 1) % beats + 1));
               if (note) $nextNote.removeClass('inactive');
               else $nextNote.addClass('inactive');
 
