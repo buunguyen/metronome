@@ -17,14 +17,22 @@
           <input type="number" id="beats" placeholder="Beats Per Measure" value="4" />
         </div>
       </div>
-        <div class="row center-label">
-          <div class="col-sm-12 col-md-1">
-            <label for="bpm">BPM</label>
-          </div>
-          <div class="col-sm-12 col-md-11">
-            <input type="number" id="bpm" placeholder="Beats Per Minute" value="80" />
-          </div>
+      <div class="row center-label">
+        <div class="col-sm-12 col-md-1">
+          <label for="bpm">BPM</label>
         </div>
+        <div class="col-sm-12 col-md-11">
+          <input type="number" id="bpm" placeholder="Beats Per Minute" value="80" />
+        </div>
+      </div>
+      <div class="row center-label">
+        <div class="col-sm-12 col-md-1">
+          <label for="delay">Delay</label>
+        </div>
+        <div class="col-sm-12 col-md-11">
+          <input type="number" id="delay" placeholder="Sound delay (ms)" value="0" />
+        </div>
+      </div>
       <div class="row center-label">
         <div class="col-sm-12 col-md-1">
           <label for="sound">Sound</label>
@@ -168,7 +176,7 @@
           $('#modal-open').click();
 
           setTimeout(() => {
-            const {beats, bpm, sounds, notes} = getData();
+            const {beats, bpm, delay, sounds, notes} = getData();
 
             let beatCount = 0;
             let prevNote = '';
@@ -192,10 +200,11 @@
 
               // Play sound
               const soundId = sounds[beatCount % beats];
-              switch (soundId) {
-                case 1: beep(20, 950, 200); break;
-                case 2: beep(20, 800, 250); break;
-                case 3: beep(20, 720, 300); break;
+              console.log('delay', delay)
+              if (delay === 0) {
+                playSound(soundId);
+              } else {
+                setTimeout(() => playSound(soundId), delay);
               }
 
               prevNote = note;
@@ -222,6 +231,7 @@
       function getData() {
         const beats = Number($('#beats').val());
         const bpm = Number($('#bpm').val());
+        const delay = Number($('#delay').val());
         const sounds = $('.sounds').map(function() {
           return Number($(this).val());
         }).get();
@@ -229,7 +239,7 @@
           return $(this).val();
         }).get();
 
-        return {beats, bpm, sounds, notes};
+        return {beats, bpm, delay, sounds, notes};
       }
 
       function save() {
@@ -243,9 +253,10 @@
         } else {
           const data = JSON.parse(dataStr);
 
-          // Load beats & BPM
+          // Load beats & BPM & delay
           $('#beats').val(data.beats);
-          $('#bpm').val(data.bpm)
+          $('#bpm').val(data.bpm);
+          $('#delay').val(data.delay);
 
           // Load sounds
           $('#sounds').append(
@@ -291,6 +302,14 @@
         u.gain.value = vol * 0.01;
         v.start(audio.currentTime);
         v.stop(audio.currentTime + duration * 0.001);
+      }
+
+      function playSound(soundId) {
+        switch (soundId) {
+          case 1: return beep(20, 950, 200);
+          case 2: return beep(20, 800, 250);
+          case 3: return beep(20, 720, 300);
+        }
       }
     </script>
   </body>
