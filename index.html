@@ -56,8 +56,11 @@
     <div class="modal">
       <div class="card">
         <label for="modal-control" class="modal-close"></label>
-        <div class="note circular"></div>
-        <div class="next-note"></div>
+        <div class="note"></div>
+        <div class="wrapper">
+          <div class="prev-note"></div>
+          <div class="next-note"></div>
+        </div>
       </div>
     </div>
 
@@ -93,16 +96,32 @@
         justify-content: center;
       }
       .modal .note {
-        font-size: 120px;
+        font-size: 100px;
         color: #2c3e50;
       }
       .modal .note.inactive {
         color: #95a5a6;
       }
+
+      .modal .wrapper {
+        display: flex;
+        width: 100%;
+        align-content: space-around;
+      }
+      .modal .prev-note,
       .modal .next-note {
-        font-size: 30px;
-        color: #34495e;
-        position: relative;
+        font-size: 50px;
+        flex-grow: 1;
+        min-width: 300px;
+      }
+      .modal .prev-note {
+        color: #95a5a6;
+        text-align: right;
+        padding-right: 100px;
+      }
+      .modal .next-note {
+        color: #f39c12;
+        padding-left: 100px;
       }
       .modal .next-note.inactive {
         color: #95a5a6;
@@ -152,18 +171,22 @@
             const {beats, bpm, sounds, notes} = getData();
 
             let beatCount = 0;
+            let prevNote = '';
             intervalId = setInterval(() => {
               // Show note
-              const note = notes[beatCount % notes.length];
+              const note = notes[beatCount % notes.length] || '•'.repeat(beatCount % beats + 1);
               const $note = $('.modal .note');
-              $note.text(note || (beatCount % beats + 1));
+              $note.text(note);
               if (note) $note.removeClass('inactive');
               else $note.addClass('inactive');
 
               // Show next note
-              const nextNote = notes[(beatCount + 1) % notes.length]
+              $('.modal .prev-note').text(prevNote || 'N/A');
+
+              // Show next note
+              const nextNote = notes[(beatCount + 1) % notes.length] || '•'.repeat((beatCount + 1) % beats + 1);
               const $nextNote = $('.modal .next-note');
-              $nextNote.text(nextNote || ((beatCount + 1) % beats + 1));
+              $nextNote.text(nextNote);
               if (note) $nextNote.removeClass('inactive');
               else $nextNote.addClass('inactive');
 
@@ -175,7 +198,11 @@
                 case 3: beep(20, 720, 300); break;
               }
 
+              prevNote = note;
               beatCount++;
+              if (beatCount === notes.length) {
+                beatCount = 0;
+              }
             }, (60 * 1000) / bpm);
           }, 500);
         });
@@ -183,6 +210,7 @@
         $('.modal-close').click(() => {
           clearInterval(intervalId);
           $('.modal .note').text('');
+          $('.modal .prev-note').text('');
           $('.modal .next-note').text('');
           save();
         });
@@ -197,7 +225,7 @@
         const sounds = $('.sounds').map(function() {
           return Number($(this).val());
         }).get();
-        const notes = $('.note').map(function() {
+        const notes = $('#notes .note').map(function() {
           return $(this).val();
         }).get();
 
