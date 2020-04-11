@@ -27,7 +27,15 @@
       </div>
       <div class="row center-label">
         <div class="col-sm-12 col-md-1">
-          <label for="delay">Delay</label>
+          <label for="initDelay">Initial Delay</label>
+        </div>
+        <div class="col-sm-12 col-md-11">
+          <input type="number" id="initDelay" placeholder="Initial delay (ms)" value="0" />
+        </div>
+      </div>
+      <div class="row center-label">
+        <div class="col-sm-12 col-md-1">
+          <label for="delay">Sound Delay</label>
         </div>
         <div class="col-sm-12 col-md-11">
           <input type="number" id="delay" placeholder="Sound delay (ms)" value="0" />
@@ -104,7 +112,7 @@
         justify-content: center;
       }
       .modal .note {
-        font-size: 100px;
+        font-size: 120px;
         color: #2c3e50;
       }
       .modal .note.inactive {
@@ -118,27 +126,37 @@
       }
       .modal .prev-note,
       .modal .next-note {
-        font-size: 50px;
+        font-size: 70px;
         flex-grow: 1;
         width: 50%;
       }
       .modal .prev-note {
         color: #95a5a6;
         text-align: right;
-        padding-right: 100px;
+        padding-right: 120px;
       }
       .modal .next-note {
         color: #f39c12;
-        padding-left: 100px;
+        padding-left: 120px;
       }
       .modal .next-note.inactive {
         color: #95a5a6;
+      }
+      .modal .modal-close {
+        width: 3rem !important;
+        height: 3rem !important;
+      }
+      .modal .modal-close::before {
+        font-size: 3rem !important;
       }
     </style>
 
     <script>
 
       $(document).ready(() => {
+        // Load data from storage
+        load();
+
         // Handle beat count change
         $('#beats').change(() => {
           $('#notes').empty();
@@ -171,66 +189,91 @@
         });
 
         // Start metronome
-        let intervalId;
         $('#start').click(() => {
+          // This to actually open
           $('#modal-open').click();
 
-          setTimeout(() => {
-            const {beats, bpm, delay, sounds, notes} = getData();
+          // Click anywhere to restart
+          $('.modal').click(() => {
+            stop();
+            start();
+          });
 
-            let beatCount = 0;
-            let prevNote = '';
-            intervalId = setInterval(() => {
-              // Show note
-              const note = notes[beatCount % notes.length] || '•'.repeat(beatCount % beats + 1);
-              const $note = $('.modal .note');
-              $note.text(note);
-              if (note) $note.removeClass('inactive');
-              else $note.addClass('inactive');
-
-              // Show next note
-              $('.modal .prev-note').text(prevNote || 'N/A');
-
-              // Show next note
-              const nextNote = notes[(beatCount + 1) % notes.length] || '•'.repeat((beatCount + 1) % beats + 1);
-              const $nextNote = $('.modal .next-note');
-              $nextNote.text(nextNote);
-              if (note) $nextNote.removeClass('inactive');
-              else $nextNote.addClass('inactive');
-
-              // Play sound
-              const soundId = sounds[beatCount % beats];
-              console.log('delay', delay)
-              if (delay === 0) {
-                playSound(soundId);
-              } else {
-                setTimeout(() => playSound(soundId), delay);
-              }
-
-              prevNote = note;
-              beatCount++;
-              if (beatCount === notes.length) {
-                beatCount = 0;
-              }
-            }, (60 * 1000) / bpm);
-          }, 500);
+          start();
         });
 
         $('.modal-close').click(() => {
+          $('.modal').off('click');
+          stop();
+        });
+
+        let intervalId;
+        function start() {
+          const {beats, bpm, initDelay, delay, sounds, notes} = getData();
+
+          let beatCount = 0;
+          let prevNote = '';
+
+          if (initDelay) {
+            setTimeout(tick, initDelay);
+          } else {
+            tick();
+          }
+
+          function tick() {
+            // Schedule subsequent runs
+            if (!intervalId) {
+              intervalId = setInterval(tick, (60 * 1000) / bpm);
+            }
+
+            // Show note
+            const note = notes[beatCount % notes.length] || '•'.repeat(beatCount % beats + 1);
+            const $note = $('.modal .note');
+            $note.text(note);
+            if (note) $note.removeClass('inactive');
+            else $note.addClass('inactive');
+
+            // Show next note
+            $('.modal .prev-note').text(prevNote || 'N/A');
+
+            // Show next note
+            const nextNote = notes[(beatCount + 1) % notes.length] || '•'.repeat((beatCount + 1) % beats + 1);
+            const $nextNote = $('.modal .next-note');
+            $nextNote.text(nextNote);
+            if (note) $nextNote.removeClass('inactive');
+            else $nextNote.addClass('inactive');
+
+            // Play sound
+            const soundId = sounds[beatCount % beats];
+            if (delay === 0) {
+              playSound(soundId);
+            } else {
+              setTimeout(() => playSound(soundId), delay);
+            }
+
+            prevNote = note;
+            beatCount++;
+            if (beatCount === notes.length) {
+              beatCount = 0;
+            }
+          }
+        }
+
+        function stop() {
           clearInterval(intervalId);
+          intervalId = null;
           $('.modal .note').text('');
           $('.modal .prev-note').text('');
           $('.modal .next-note').text('');
           save();
-        });
-
-        load();
+        }
       });
 
       // Storage
       function getData() {
         const beats = Number($('#beats').val());
         const bpm = Number($('#bpm').val());
+        const initDelay = Number($('#initDelay').val());
         const delay = Number($('#delay').val());
         const sounds = $('.sounds').map(function() {
           return Number($(this).val());
@@ -239,7 +282,7 @@
           return $(this).val();
         }).get();
 
-        return {beats, bpm, delay, sounds, notes};
+        return {beats, bpm, initDelay, delay, sounds, notes};
       }
 
       function save() {
@@ -253,9 +296,10 @@
         } else {
           const data = JSON.parse(dataStr);
 
-          // Load beats & BPM & delay
+          // Load data
           $('#beats').val(data.beats);
           $('#bpm').val(data.bpm);
+          $('#initDelay').val(data.initDelay);
           $('#delay').val(data.delay);
 
           // Load sounds
